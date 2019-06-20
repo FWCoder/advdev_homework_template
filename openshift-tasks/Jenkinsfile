@@ -33,9 +33,9 @@ podTemplate(
       def version = getVersionFromPom("pom.xml")
 
       // TBD Set the tag for the development image: version + build number
-      def devTag  = ""
+      def devTag  = "${version}-${BUILD_NUMBER}"
       // Set the tag for the production image: version
-      def prodTag = ""
+      def prodTag = "${version}"
 
       // Using Maven build the war file
       // Do not run tests in this step
@@ -43,6 +43,7 @@ podTemplate(
         echo "Building version ${devTag}"
 
         // TBD: Execute Maven Build
+	sh "${mvnCmd} clean install -DskipTests=true"
       }
 
       // TBD: The next two stages should run in parallel
@@ -52,6 +53,7 @@ podTemplate(
         echo "Running Unit Tests"
 
         // TBD: Execute Unit Tests
+	sh "${mvnCmd} test"
       }
 
       // Using Maven to call SonarQube for Code Analysis
@@ -59,6 +61,7 @@ podTemplate(
         echo "Running Code Analysis"
 
         // TBD: Execute Sonarqube Tests
+	sh "${mvnCmd} sonar:sonar -Dsonar.host.url=http://sonarqube-gpte-hw-cicd.apps.na311.openshift.opentlc.com"
       }
 
       // Publish the built war file to Nexus
@@ -66,6 +69,7 @@ podTemplate(
         echo "Publish to Nexus"
 
         // TBD: Publish to Nexus
+	sh "${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::https://nexus-registry.gpte-hw-cicd.svc.cluster.local:5000/repository/releases"
       }
 
       // Build the OpenShift Image in OpenShift and tag it.
@@ -73,6 +77,14 @@ podTemplate(
         echo "Building OpenShift container image tasks:${devTag}"
 
         // TBD: Build Image, tag Image
+	script {
+            openshift.withCluster() {
+                openshift.withProject("${GUID}-tasks-dev") {
+                    openshift.selector("bc","tasks").startBuild("--from-file=./target/openshift-tasks.war","--wait=true")
+                    openshift.tag("tasks:latest", "tasks:${devTag}")
+                }
+            }
+        }
       }
 
       // Deploy the built image to the Development Environment.
@@ -82,6 +94,7 @@ podTemplate(
         // TBD: Deploy to development Project
         //      Set Image, Set VERSION
         //      Make sure the application is running and ready before proceeding
+        
       }
 
       // Copy Image to Nexus container registry
