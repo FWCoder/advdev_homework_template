@@ -121,10 +121,10 @@ podTemplate(
             // TBD: Deploy the image
             // 1. Update the image on the dev deployment config
                     // openshift.set("image", "dc/tasks", "tasks=docker-registry.default.svc:5000/${devProject}/tasks:${devTag}")
-                    def dc_tasks = openshift.selector("dc/tasks").object()                
-                    dc_tasks.spec.template.spec.containers[0].image="docker-registry.default.svc:5000/${devProject}/tasks:${devTag}"
-                    dc_tasks.spec.template.spec.containers[0].env[0].value='${devTag} (tasks-dev)'
-                    openshift.apply(dc_tasks)
+                    def dc = openshift.selector("dc", "tasks").object()                
+                    dc.spec.template.spec.containers[0].image="docker-registry.default.svc:5000/${devProject}/tasks:${devTag}"
+                    dc.spec.template.spec.containers[0].env[0].value='${devTag} (tasks-dev)'
+                    openshift.apply(dc)
     
             // 2. Update the config maps with the potentially changed properties files
                     openshift.selector("configmap", "tasks-config").delete()
@@ -138,7 +138,7 @@ podTemplate(
            //    (rc.status.readyReplicas)
            //
            
-                    def dc = openshift.selector("dc", "tasks").object()
+                    dc = openshift.selector("dc", "tasks").object()
                     def dc_version = dc.status.latestVersion
                     def rc = openshift.selector("rc", "tasks-${dc_version}").object()
             
